@@ -44,7 +44,7 @@ jobs:
           - x86_64
 
     steps:
-      - uses: actions/checkout@main
+      - uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0
 
@@ -108,7 +108,7 @@ jobs:
           IGNORE_ERRORS: true
 
       - name: Store packages
-        uses: actions/upload-artifact@main
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: ${{ matrix.arch }}-${{ matrix.sdk }}
           path: bin/packages/${{ matrix.arch }}/packages_ci/*.ipk
@@ -123,7 +123,7 @@ jobs:
           echo -e "4. 如果单独安装ssr与依赖，\`rm -rf {*passwall*,*homeproxy*}\`\n" >> release.txt
           
       - name: Upload packages
-        uses: ncipollo/release-action@main
+        uses: ncipollo/release-action@v1.21.0
         with:
           token: ${{ secrets.ACCESS_TOKEN }}
           artifacts: "${{ matrix.arch }}-${{ matrix.sdk }}.zip,bin/packages/${{ matrix.arch }}/packages_ci/*.ipk"
