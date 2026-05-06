@@ -470,8 +470,8 @@ return view.extend({
     return f + ' ' + c;
   },
 
-  _configuredChannel: function (family) {
-    var dcore = uci.get('clashoo', 'config', 'dcore') || '2';
+  _configuredChannel: function (family, st) {
+    var dcore = (st && st.dcore) || uci.get('clashoo', 'config', 'dcore') || '2';
     if (family === 'singbox')
       return dcore === '5' ? 'alpha' : 'stable';
     if (dcore === '1') return 'smart';
@@ -497,16 +497,33 @@ return view.extend({
     wrap.appendChild(this._renderCoreSwitch(this._lastSt || {}));
   },
 
+  _showCoreSwitchHint: function (msg) {
+    var self = this;
+    self._coreSwitchMsg = msg;
+    self._refreshCoreSwitch();
+    setTimeout(function () {
+      if (self._coreSwitchMsg === msg) {
+        self._coreSwitchMsg = '';
+        self._refreshCoreSwitch();
+      }
+    }, 3500);
+  },
+
   _switchCore: function (targetCore) {
     var self = this;
     if (self._coreSwitchBusy)
       return Promise.resolve();
 
+    if (targetCore === 'smart' && self._lastSt && self._lastSt.has_smart === false) {
+      self._showCoreSwitchHint('未检测到 Smart 内核；更新模型不会安装内核，请到系统页下载 Smart 版');
+      return Promise.resolve();
+    }
+
     var currentEffective = self._effectiveCore(self._lastSt || {});
     if (targetCore === currentEffective)
       return Promise.resolve();
 
-    var currentDcore = uci.get('clashoo', 'config', 'dcore') || '2';
+    var currentDcore = (self._lastSt && self._lastSt.dcore) || uci.get('clashoo', 'config', 'dcore') || '2';
     var rpcCore, nextDcore, targetLabel;
     if (targetCore === 'smart') {
       rpcCore = 'mihomo'; nextDcore = '1'; targetLabel = 'Smart';
@@ -522,6 +539,10 @@ return view.extend({
 
     return clashoo.setCore(rpcCore, nextDcore)
       .then(function (r) {
+        if (r && r.success === false && r.error === 'smart_core_missing') {
+          self._showCoreSwitchHint('未检测到 Smart 内核；更新模型不会安装内核，请到系统页下载 Smart 版');
+          throw { soft: true };
+        }
         if (r && r.success === false)
           throw new Error(r.message || '切换内核失败');
         self._lastSt = self._lastSt || {};
@@ -545,6 +566,8 @@ return view.extend({
         ui.addNotification(null, E('p', msg));
       })
       .catch(function (e) {
+        if (e && e.soft)
+          return;
         self._coreSwitchMsg = '切换失败';
         ui.addNotification(null, E('p', '切换失败: ' + (e.message || e)));
       })
@@ -568,8 +591,10 @@ return view.extend({
 
     var mkBtn = function (core, label) {
       var active = core === effective;
+      var missingSmart = core === 'smart' && st && st.has_smart === false;
       return E('button', {
         type: 'button',
+        title: missingSmart ? '未检测到 Smart 内核；更新模型不会安装内核' : null,
         'class': 'cl-core-btn' + (active ? ' active' : ''),
         disabled: self._coreSwitchBusy ? '' : null,
         click: function (ev) {
@@ -630,7 +655,7 @@ return view.extend({
     var statusKnown = st && typeof st.running === 'boolean';
     var running = statusKnown && st.running === true;
     var health = st.health_status || 'unknown';
-    var configuredCoreLabel = this._coreLabel(st.core_type, this._configuredChannel(st.core_type));
+    var configuredCoreLabel = this._coreLabel(st.core_type, this._configuredChannel(st.core_type, st));
 
     var statusChildren = [
       !statusKnown
