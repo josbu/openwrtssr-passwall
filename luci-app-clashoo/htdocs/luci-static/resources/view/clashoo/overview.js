@@ -16,6 +16,9 @@ var CSS = [
   '.cl-status-kernel .cl-core-btn.active{background:rgba(var(--primary-rgb,0,122,255),.2);border:0;color:var(--primary-color,#0b68dd);box-shadow:none;opacity:1}',
   '.cl-status-kernel .cl-core-btn:disabled{opacity:.48;cursor:not-allowed}',
   '.cl-status-kernel.is-busy{opacity:.9}',
+  '.cl-core-switch-wrap{display:flex;flex-direction:column;align-items:flex-start;gap:6px}',
+  '.cl-core-switch-hint{font-size:12px;line-height:1.35;color:rgba(74,86,106,.72)}',
+  'body.dark .cl-core-switch-hint,html[data-theme="dark"] .cl-core-switch-hint,html[data-bs-theme="dark"] .cl-core-switch-hint{color:rgba(208,219,238,.72)}',
   'body.dark .cl-status-kernel,body.dark .cl-status-kernel,html[data-theme="dark"] .cl-status-kernel,html[data-bs-theme="dark"] .cl-status-kernel{border:0;background:rgba(255,255,255,.06)}',
   'body.dark .cl-status-kernel .cl-core-btn.active,body.dark .cl-status-kernel .cl-core-btn.active,html[data-theme="dark"] .cl-status-kernel .cl-core-btn.active,html[data-bs-theme="dark"] .cl-status-kernel .cl-core-btn.active{background:rgba(var(--primary-rgb,122,180,255),.24);border:0;color:rgba(222,236,255,.96);box-shadow:none}',
   '.cl-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}',
@@ -583,11 +586,7 @@ return view.extend({
   _renderCoreSwitch: function (st) {
     var self = this;
     var effective = this._effectiveCore(st);
-    var statusKnown = st && typeof st.running === 'boolean';
-    var running = statusKnown && st.running === true;
-    var runningText = statusKnown ? (running ? '运行中' : '未运行') : '同步中';
-    var coreText = effective === 'singbox' ? 'sing-box' : effective === 'smart' ? 'Smart' : 'mihomo';
-    var note = this._coreSwitchMsg || ('当前内核：' + coreText + ' · ' + runningText);
+    var note = this._coreSwitchMsg || '';
 
     var mkBtn = function (core, label) {
       var active = core === effective;
@@ -604,14 +603,20 @@ return view.extend({
       }, label);
     };
 
-    return E('div', {
-      'class': 'cl-status-kernel' + (this._coreSwitchBusy ? ' is-busy' : ''),
-      title: note
-    }, [
-      mkBtn('mihomo', 'Mihomo'),
-      mkBtn('smart', 'Smart'),
-      mkBtn('singbox', 'Sing-box')
-    ]);
+    var children = [
+      E('div', {
+        'class': 'cl-status-kernel' + (this._coreSwitchBusy ? ' is-busy' : ''),
+        title: note || null
+      }, [
+        mkBtn('mihomo', 'Mihomo'),
+        mkBtn('smart', 'Smart'),
+        mkBtn('singbox', 'Sing-box')
+      ])
+    ];
+    if (note)
+      children.push(E('div', { 'class': 'cl-core-switch-hint' }, note));
+
+    return E('div', { 'class': 'cl-core-switch-wrap' }, children);
   },
 
   _proxyModeLabel: function (mode) {
